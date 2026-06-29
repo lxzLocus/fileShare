@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FileShare — 一時ファイル共有</title>
+    <link rel="stylesheet" href="style.css?v=3" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📂</text></svg>"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>📂 FileShare</h1>
+      <p class="sub">PC ↔ スマホの一時ファイル受け渡し。期限が来たら自動で消えます。</p>
+      <button id="qrToggle" class="ghost" type="button">📱 スマホで開く</button>
+    </header>
+
+    <section id="qrPanel" class="qr-panel hidden">
+      <div id="qrCode" class="qr-code"></div>
+      <div class="qr-urls">
+        <p>同じWi-Fiのスマホで、このURLを開くかQRを読み取ってください：</p>
+        <ul id="urlList"></ul>
+      </div>
+    </section>
+
+    <main>
+      <div id="dropzone" class="dropzone">
+        <input type="file" id="fileInput" multiple hidden />
+        <div class="dz-inner">
+          <div class="dz-icon">⬆️</div>
+          <p class="dz-title">ここにファイルをドラッグ&ドロップ</p>
+          <p class="dz-sub">または <button type="button" id="browseBtn" class="link">ファイルを選択</button></p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <label>
+          保存期限：
+          <select id="expirySelect">
+            <option value="10m">10分</option>
+            <option value="1h">1時間</option>
+            <option value="6h">6時間</option>
+            <option value="1d" selected>1日</option>
+            <option value="7d">7日</option>
+            <option value="30d">30日</option>
+            <option value="never">無期限</option>
+          </select>
+        </label>
+        <button id="refreshBtn" class="ghost" type="button">🔄 更新</button>
+      </div>
+
+      <div id="uploadQueue" class="queue"></div>
+
+      <div class="files-bar">
+        <h2 class="files-head">共有中のファイル <span id="count" class="count">0</span></h2>
+        <div class="view-toggle" role="group" aria-label="表示切替">
+          <button id="viewGrid" class="vt" type="button" title="サムネイル表示" aria-label="サムネイル表示">▦</button>
+          <button id="viewList" class="vt" type="button" title="リスト表示" aria-label="リスト表示">☰</button>
+        </div>
+      </div>
+      <div id="fileGrid" class="grid"></div>
+      <p id="empty" class="empty">まだファイルがありません。上のエリアにドロップしてください。</p>
+    </main>
+
+    <!-- 確認ポップアップ -->
+    <div id="modal" class="modal-overlay hidden">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h3 id="modalTitle" class="modal-title">確認</h3>
+        <p id="modalMsg" class="modal-msg"></p>
+        <div class="modal-actions">
+          <button id="modalCancel" class="ghost" type="button">キャンセル</button>
+          <button id="modalOk" class="btn-danger" type="button">削除</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js?v=3"></script>
+  </body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "fileshare",
+  "version": "1.0.0",
+  "description": "ドラッグ&ドロップで一時的にファイルを共有するローカルWebアプリ",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.0.0",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "ffmpeg-static": "^5.2.0"
+  }
+}

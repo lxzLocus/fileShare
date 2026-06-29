@@ -1,0 +1,8 @@
+node_modules/
+data/
+uploads/
+db.json
+.env
+npm-debug.log*
+*.log
+.claude
