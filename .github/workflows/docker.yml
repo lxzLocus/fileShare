@@ -2,10 +2,11 @@ name: Build & Push Docker image
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "master"]
     tags: ["v*"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "master"]
+  workflow_dispatch: {} # 手動実行も可能に
 
 env:
   REGISTRY: ghcr.io
