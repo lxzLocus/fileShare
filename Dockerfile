@@ -5,7 +5,8 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 # 動画サムネ用に musl ネイティブの ffmpeg を入れる（同梱ffmpeg-staticは使わない）
-RUN apk add --no-cache ffmpeg
+# su-exec は entrypoint で root→app に降格するために使う
+RUN apk add --no-cache ffmpeg su-exec
 
 # 依存だけ先に入れてレイヤキャッシュを効かせる
 # --omit=dev だけにする(=devのffmpeg-staticは入らない)。
@@ -24,9 +25,14 @@ ENV FFMPEG_PATH=ffmpeg
 RUN mkdir -p /app/data/uploads && \
     addgroup -S app && adduser -S app -G app && \
     chown -R app:app /app
-USER app
+
+# entrypoint は root のまま起動してマウント先を chown し、app に降格する
+# （Proxmox 等の unprivileged LXC ではバインドマウントが root 所有になり EACCES になるため）
+COPY entrypoint.sh /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 ENV PORT=3000
 EXPOSE 3000
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["node", "server.js"]
