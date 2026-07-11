@@ -196,6 +196,9 @@ button { font: inherit; cursor: pointer; }
 .btn-dl:hover { background: var(--accent); }
 .btn-del { background: transparent; color: var(--danger); }
 .btn-del:hover { background: #2a1c22; }
+.btn-copy { background: transparent; color: var(--text); cursor: pointer; }
+.btn-copy:hover { background: var(--panel-2); }
+.btn-copy:disabled { opacity: 0.8; cursor: default; }
 
 /* List view */
 .list { display: flex; flex-direction: column; gap: 8px; }

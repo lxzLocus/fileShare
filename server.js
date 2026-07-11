@@ -1,6 +1,8 @@
 import express from "express";
 import multer from "multer";
 import QRCode from "qrcode";
+import http from "node:http";
+import https from "node:https";
 import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -11,6 +13,8 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
+// HTTPS化（LAN内の他端末でもクリップボードAPIを使うにはセキュアコンテキストが必要）
+const USE_HTTPS = /^(1|true|yes|on)$/i.test(process.env.HTTPS || "");
 // データ保存先（Dockerではボリュームをマウントして永続化）
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
@@ -322,11 +326,52 @@ function getNetworkUrls(req) {
   for (const name of Object.keys(nics)) {
     for (const nic of nics[name] || []) {
       if (nic.family === "IPv4" && !nic.internal) {
-        urls.push(`http://${nic.address}:${PORT}`);
+        urls.push(`${USE_HTTPS ? "https" : "http"}://${nic.address}:${PORT}`);
       }
     }
   }
   return urls;
+}
+
+// TLS証明書を用意する（TLS_KEY/TLS_CERT指定があれば優先。無ければ自己署名を生成してDATA_DIRに保存）
+async function loadTlsOptions() {
+  const keyPath = process.env.TLS_KEY || path.join(DATA_DIR, "tls", "key.pem");
+  const certPath = process.env.TLS_CERT || path.join(DATA_DIR, "tls", "cert.pem");
+  try {
+    const [key, cert] = await Promise.all([fs.readFile(keyPath), fs.readFile(certPath)]);
+    console.log(`TLS: 既存の証明書を使用 (${certPath})`);
+    return { key, cert };
+  } catch {
+    // 無ければ自己署名を生成
+  }
+  if (process.env.TLS_KEY || process.env.TLS_CERT) {
+    throw new Error(`TLS_KEY/TLS_CERT が指定されましたが読み込めません: ${keyPath} / ${certPath}`);
+  }
+  const { default: selfsigned } = await import("selfsigned");
+  // 検出したLAN IPをSAN(subjectAltName)に含め、各端末が https://<IP> で開けるようにする
+  const ips = [];
+  const nics = os.networkInterfaces();
+  for (const list of Object.values(nics)) {
+    for (const nic of list || []) {
+      if (nic.family === "IPv4" && !nic.internal) ips.push(nic.address);
+    }
+  }
+  const altNames = [
+    { type: 2, value: "localhost" },
+    { type: 7, ip: "127.0.0.1" },
+    ...ips.map((ip) => ({ type: 7, ip })),
+  ];
+  const pems = selfsigned.generate([{ name: "commonName", value: "fileshare.local" }], {
+    days: 3650,
+    keySize: 2048,
+    algorithm: "sha256",
+    extensions: [{ name: "subjectAltName", altNames }],
+  });
+  await fs.mkdir(path.dirname(keyPath), { recursive: true });
+  await fs.writeFile(keyPath, pems.private, { mode: 0o600 });
+  await fs.writeFile(certPath, pems.cert);
+  console.log(`TLS: 自己署名証明書を生成しました (${certPath})`);
+  return { key: pems.private, cert: pems.cert };
 }
 
 // ---------- 起動 ----------
@@ -337,11 +382,19 @@ async function main() {
   await cleanupExpired();
   setInterval(cleanupExpired, 30 * 1000); // 30秒ごとに期限チェック
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const proto = USE_HTTPS ? "https" : "http";
+  const server = USE_HTTPS
+    ? https.createServer(await loadTlsOptions(), app)
+    : http.createServer(app);
+
+  server.listen(PORT, "0.0.0.0", () => {
     console.log(`\n  📂 FileShare 起動しました`);
-    console.log(`     ローカル:  http://localhost:${PORT}`);
+    console.log(`     ローカル:  ${proto}://localhost:${PORT}`);
     for (const u of getNetworkUrls()) {
       console.log(`     LAN:      ${u}   ← スマホからはこちら`);
+    }
+    if (USE_HTTPS) {
+      console.log(`\n  🔒 HTTPS有効: 自己署名証明書のため、各端末で初回に警告を許可してください`);
     }
     console.log("");
   });

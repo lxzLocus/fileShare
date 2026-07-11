@@ -13,10 +13,14 @@ services:
       - PORT=3000
       - DATA_DIR=/app/data
       - TZ=Asia/Tokyo
+      # LAN内の他端末でもクリップボード(コピー/貼り付け)を使うにはHTTPSが必要。
+      # HTTPS=1 にすると自己署名証明書を data/tls/ に自動生成する（各端末で初回に警告を許可）。
+      # - HTTPS=1
     volumes:
       # アップロードファイルとメタDBを永続化（コンテナを作り直しても残る）
       - ./data:/app/data
     healthcheck:
+      # HTTPS=1 の場合は下のtestを https:// + NODE_TLS_REJECT_UNAUTHORIZED=0 に切り替える
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/files').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s

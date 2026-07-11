@@ -117,14 +117,71 @@ function gridCard(f) {
   dl.className = "btn-dl";
   dl.href = `/api/file/${f.id}`;
   dl.textContent = "⬇ 保存";
+  actions.appendChild(dl);
+  if (f.isImage) actions.appendChild(copyBtn(f));
   const del = document.createElement("button");
   del.className = "btn-del";
   del.textContent = "🗑";
   del.onclick = () => deleteFile(f.id, f.name);
-  actions.append(dl, del);
+  actions.appendChild(del);
 
   card.append(thumbEl(f), body, actions);
   return card;
+}
+
+// 画像をクリップボードへコピーするボタン
+function copyBtn(f) {
+  const btn = document.createElement("button");
+  btn.className = "btn-copy";
+  btn.textContent = "📋 コピー";
+  btn.title = "画像をクリップボードにコピー";
+  btn.onclick = () => copyImage(f, btn);
+  return btn;
+}
+
+// 原本画像を取得し、PNGに変換してクリップボードへ書き込む
+async function copyImage(f, btn) {
+  const original = btn.textContent;
+  const flash = (text) => {
+    btn.textContent = text;
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1500);
+  };
+  try {
+    if (!navigator.clipboard || !window.ClipboardItem) {
+      throw new Error("clipboard-unsupported");
+    }
+    const res = await fetch(`/api/raw/${f.id}`);
+    if (!res.ok) throw new Error("fetch-failed");
+    let blob = await res.blob();
+    // クリップボードは基本 image/png のみ対応 → 必要ならcanvasで変換
+    if (blob.type !== "image/png") {
+      blob = await toPngBlob(blob);
+    }
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    flash("✅ コピー済み");
+  } catch (e) {
+    console.error(e);
+    flash(e.message === "clipboard-unsupported" ? "⚠ 非対応" : "⚠ 失敗");
+  }
+}
+
+// 任意の画像BlobをPNG Blobへ変換
+function toPngBlob(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode-failed"))), "image/png");
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("decode-failed")); };
+    img.src = url;
+  });
 }
 
 function listRow(f) {
@@ -147,11 +204,13 @@ function listRow(f) {
   dl.className = "btn-dl";
   dl.href = `/api/file/${f.id}`;
   dl.textContent = "⬇ 保存";
+  actions.appendChild(dl);
+  if (f.isImage) actions.appendChild(copyBtn(f));
   const del = document.createElement("button");
   del.className = "btn-del";
   del.textContent = "🗑";
   del.onclick = () => deleteFile(f.id, f.name);
-  actions.append(dl, del);
+  actions.appendChild(del);
 
   row.append(thumbEl(f), info, actions);
   return row;
@@ -277,6 +336,30 @@ fileInput.addEventListener("change", () => { uploadFiles(fileInput.files); fileI
 // ページ全体へのドロップで誤って開くのを防止
 window.addEventListener("dragover", (e) => e.preventDefault());
 window.addEventListener("drop", (e) => e.preventDefault());
+
+// クリップボードからの貼り付けでアップロード（画像スクショなど）
+window.addEventListener("paste", (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  const files = [];
+  for (const it of items) {
+    if (it.kind === "file") {
+      let file = it.getAsFile();
+      if (!file) continue;
+      // 貼り付け画像は既定名(image.png等)になりがち → 時刻入りの名前を付ける
+      if (!file.name || /^image\.\w+$/i.test(file.name)) {
+        const ext = (file.type.split("/")[1] || "png").replace("jpeg", "jpg");
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+        file = new File([file], `pasted-${stamp}.${ext}`, { type: file.type });
+      }
+      files.push(file);
+    }
+  }
+  if (files.length) {
+    e.preventDefault();
+    uploadFiles(files);
+  }
+});
 
 refreshBtn.addEventListener("click", loadFiles);
 
