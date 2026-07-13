@@ -1,6 +1,9 @@
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("fileInput");
 const browseBtn = document.getElementById("browseBtn");
+const textInput = document.getElementById("textInput");
+const textName = document.getElementById("textName");
+const textShareBtn = document.getElementById("textShareBtn");
 const expirySelect = document.getElementById("expirySelect");
 const uploadQueue = document.getElementById("uploadQueue");
 const fileGrid = document.getElementById("fileGrid");
@@ -332,6 +335,29 @@ dropzone.addEventListener("drop", (e) => uploadFiles(e.dataTransfer.files));
 dropzone.addEventListener("click", () => fileInput.click());
 browseBtn.addEventListener("click", (e) => { e.stopPropagation(); fileInput.click(); });
 fileInput.addEventListener("change", () => { uploadFiles(fileInput.files); fileInput.value = ""; });
+
+// ---------- テキストを共有（.txtとしてアップロード） ----------
+function shareText() {
+  const text = textInput.value;
+  if (!text.trim()) { textInput.focus(); return; }
+  // ファイル名を決める（未入力なら時刻入り。拡張子が無ければ .txt を付ける）
+  let name = textName.value.trim();
+  if (!name) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    name = `memo-${stamp}.txt`;
+  } else if (!/\.[a-z0-9]+$/i.test(name)) {
+    name += ".txt";
+  }
+  const file = new File([text], name, { type: "text/plain;charset=utf-8" });
+  uploadFiles([file]);
+  textInput.value = "";
+  textName.value = "";
+}
+textShareBtn.addEventListener("click", shareText);
+// Ctrl/Cmd+Enter でも共有
+textInput.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); shareText(); }
+});
 
 // ページ全体へのドロップで誤って開くのを防止
 window.addEventListener("dragover", (e) => e.preventDefault());

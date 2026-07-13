@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FileShare — 一時ファイル共有</title>
-    <link rel="stylesheet" href="style.css?v=3" />
+    <link rel="stylesheet" href="style.css?v=4" />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📂</text></svg>"
@@ -34,6 +34,25 @@
           <p class="dz-sub">または <button type="button" id="browseBtn" class="link">ファイルを選択</button></p>
         </div>
       </div>
+
+      <details id="textPanel" class="text-panel">
+        <summary>📝 テキストを共有（入力・貼り付け）</summary>
+        <textarea
+          id="textInput"
+          class="text-input"
+          rows="6"
+          placeholder="ここに文章・メモ・URL・コードなどを入力または貼り付け。&#10;「共有」を押すと .txt ファイルとして共有されます。"
+        ></textarea>
+        <div class="text-actions">
+          <input
+            id="textName"
+            class="text-name"
+            type="text"
+            placeholder="ファイル名（任意・例: memo）"
+          />
+          <button id="textShareBtn" class="btn-share" type="button">📝 共有</button>
+        </div>
+      </details>
 
       <div class="controls">
         <label>
@@ -76,6 +95,6 @@
       </div>
     </div>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
   </body>
 </html>
