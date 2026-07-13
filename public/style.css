@@ -309,6 +309,36 @@ button { font: inherit; cursor: pointer; }
   background: var(--danger); color: #fff; border: 1px solid var(--danger);
 }
 .btn-danger:hover { filter: brightness(1.08); }
+
+/* Text viewer modal */
+.text-view { max-width: 760px; display: flex; flex-direction: column; }
+.tv-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.tv-head .modal-title {
+  margin: 0; flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tv-head .ghost { padding: 4px 10px; }
+.tv-body {
+  margin: 0 0 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  max-height: 60vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 0.9rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text);
+}
+.text-view .modal-actions { justify-content: flex-end; align-items: center; }
+.text-view .modal-actions .btn-dl {
+  text-decoration: none; padding: 9px 18px; border-radius: 10px; font-size: 0.9rem;
+  border: 1px solid var(--accent-2); background: var(--accent-2); color: #fff;
+}
+.text-view .modal-actions .btn-dl:hover { background: var(--accent); }
+.btn-open { background: transparent; color: var(--text); cursor: pointer; }
+.btn-open:hover { background: var(--panel-2); }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 

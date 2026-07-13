@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FileShare — 一時ファイル共有</title>
-    <link rel="stylesheet" href="style.css?v=4" />
+    <link rel="stylesheet" href="style.css?v=5" />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📂</text></svg>"
@@ -83,6 +83,21 @@
       <p id="empty" class="empty">まだファイルがありません。上のエリアにドロップしてください。</p>
     </main>
 
+    <!-- テキストビューア（その場で開く） -->
+    <div id="textView" class="modal-overlay hidden">
+      <div class="modal text-view" role="dialog" aria-modal="true" aria-labelledby="tvTitle">
+        <div class="tv-head">
+          <h3 id="tvTitle" class="modal-title"></h3>
+          <button id="tvClose" class="ghost" type="button" aria-label="閉じる">✕</button>
+        </div>
+        <pre id="tvBody" class="tv-body"></pre>
+        <div class="modal-actions">
+          <button id="tvCopy" class="ghost" type="button">📋 コピー</button>
+          <a id="tvDownload" class="btn-dl" download>⬇ 保存</a>
+        </div>
+      </div>
+    </div>
+
     <!-- 確認ポップアップ -->
     <div id="modal" class="modal-overlay hidden">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -95,6 +110,6 @@
       </div>
     </div>
 
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=5"></script>
   </body>
 </html>

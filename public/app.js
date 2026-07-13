@@ -20,6 +20,12 @@ const modal = document.getElementById("modal");
 const modalMsg = document.getElementById("modalMsg");
 const modalOk = document.getElementById("modalOk");
 const modalCancel = document.getElementById("modalCancel");
+const textView = document.getElementById("textView");
+const tvTitle = document.getElementById("tvTitle");
+const tvBody = document.getElementById("tvBody");
+const tvCopy = document.getElementById("tvCopy");
+const tvDownload = document.getElementById("tvDownload");
+const tvClose = document.getElementById("tvClose");
 
 let viewMode = localStorage.getItem("viewMode") || "grid"; // "grid" | "list"
 let lastFiles = [];
@@ -121,6 +127,7 @@ function gridCard(f) {
   dl.href = `/api/file/${f.id}`;
   dl.textContent = "⬇ 保存";
   actions.appendChild(dl);
+  if (f.isText) actions.appendChild(openBtn(f));
   if (f.isImage) actions.appendChild(copyBtn(f));
   const del = document.createElement("button");
   del.className = "btn-del";
@@ -130,6 +137,16 @@ function gridCard(f) {
 
   card.append(thumbEl(f), body, actions);
   return card;
+}
+
+// テキストをその場で開くボタン
+function openBtn(f) {
+  const btn = document.createElement("button");
+  btn.className = "btn-open";
+  btn.textContent = "👁 開く";
+  btn.title = "その場で内容を表示";
+  btn.onclick = () => openText(f);
+  return btn;
 }
 
 // 画像をクリップボードへコピーするボタン
@@ -208,6 +225,7 @@ function listRow(f) {
   dl.href = `/api/file/${f.id}`;
   dl.textContent = "⬇ 保存";
   actions.appendChild(dl);
+  if (f.isText) actions.appendChild(openBtn(f));
   if (f.isImage) actions.appendChild(copyBtn(f));
   const del = document.createElement("button");
   del.className = "btn-del";
@@ -265,6 +283,67 @@ document.addEventListener("keydown", (e) => {
   if (modal.classList.contains("hidden")) return;
   if (e.key === "Escape") closeModal(false);
   if (e.key === "Enter") closeModal(true);
+});
+
+// ---------- テキストビューア（その場で開く / コピー / 保存） ----------
+let currentText = "";
+async function openText(f) {
+  tvTitle.textContent = f.name;
+  tvBody.textContent = "読み込み中…";
+  tvDownload.href = `/api/file/${f.id}`;
+  tvDownload.setAttribute("download", f.name);
+  currentText = "";
+  textView.classList.remove("hidden");
+  try {
+    const res = await fetch(`/api/raw/${f.id}`);
+    if (!res.ok) throw new Error("fetch-failed");
+    currentText = await res.text();
+    tvBody.textContent = currentText;
+  } catch (e) {
+    console.error(e);
+    tvBody.textContent = "読み込みに失敗しました。";
+  }
+}
+function closeTextView() {
+  textView.classList.add("hidden");
+  tvBody.textContent = "";
+  currentText = "";
+}
+
+// テキストをクリップボードへ（HTTPでも動くようexecCommandにフォールバック）
+async function copyTextToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch { /* フォールバックへ */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+tvCopy.addEventListener("click", async () => {
+  const original = tvCopy.textContent;
+  const ok = await copyTextToClipboard(currentText);
+  tvCopy.textContent = ok ? "✅ コピー済み" : "⚠ コピー失敗";
+  tvCopy.disabled = true;
+  setTimeout(() => { tvCopy.textContent = original; tvCopy.disabled = false; }, 1500);
+});
+tvClose.addEventListener("click", closeTextView);
+textView.addEventListener("click", (e) => { if (e.target === textView) closeTextView(); });
+document.addEventListener("keydown", (e) => {
+  if (!textView.classList.contains("hidden") && e.key === "Escape") closeTextView();
 });
 
 async function deleteFile(id, name) {

@@ -148,6 +148,24 @@ const EXPIRY_PRESETS = {
   never: null,
 };
 
+// テキストとして「その場で開ける」か（mime または拡張子で判定）
+const TEXT_EXTS = new Set([
+  "txt", "md", "markdown", "log", "csv", "tsv", "json", "xml", "yml", "yaml",
+  "ini", "conf", "cfg", "toml", "env", "js", "mjs", "cjs", "ts", "jsx", "tsx",
+  "css", "scss", "html", "htm", "sh", "bash", "py", "rb", "go", "rs", "java",
+  "c", "h", "cpp", "sql", "php", "pl",
+]);
+function isTextual(f) {
+  const mime = f.mime || "";
+  if (mime.startsWith("text/")) return true;
+  if (/^application\/(json|xml|javascript|x-sh|x-yaml|yaml)/.test(mime)) return true;
+  const ext = (f.name.split(".").pop() || "").toLowerCase();
+  return TEXT_EXTS.has(ext);
+}
+
+// この上限までは「その場で開く」を許可（大きすぎる場合はダウンロードのみ）
+const TEXT_PREVIEW_MAX = 1024 * 1024; // 1MB
+
 function publicFile(f) {
   return {
     id: f.id,
@@ -158,6 +176,8 @@ function publicFile(f) {
     expiresAt: f.expiresAt,
     isImage: (f.mime || "").startsWith("image/"),
     isVideo: (f.mime || "").startsWith("video/"),
+    // テキストとして開ける（表示・コピー可）。大きすぎるものは対象外
+    isText: isTextual(f) && f.size <= TEXT_PREVIEW_MAX,
     // この種別はサムネ画像を持てる（フロントは /api/thumb を参照）
     hasThumb:
       (f.mime || "").startsWith("image/") ||
