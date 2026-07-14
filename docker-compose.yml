@@ -13,6 +13,14 @@ services:
       - PORT=3000
       - DATA_DIR=/app/data
       - TZ=Asia/Tokyo
+      # スマホ用QR/アクセスURL用。コンテナ内の自動検出はゲストIP(172.x)＋内部ポートに
+      # なりスマホから届かないため、ホストのLAN IPと公開ポートを明示する。
+      # 管理画面をホストのLAN IP(例 http://192.168.1.50:3030)で開けばHostヘッダから
+      # 自動判定されるが、確実にするなら下を設定する。
+      # - PUBLIC_HOST=192.168.1.50   # ← DockerホストのLAN IP
+      # - PUBLIC_PORT=3030           # ← ports で公開したホスト側ポート
+      # または完全なURLを直接指定:
+      # - PUBLIC_URL=https://share.example.com
       # LAN内の他端末でもクリップボード(コピー/貼り付け)を使うにはHTTPSが必要。
       # HTTPS=1 にすると自己署名証明書を data/tls/ に自動生成する（各端末で初回に警告を許可）。
       # - HTTPS=1

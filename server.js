@@ -15,6 +15,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 // HTTPS化（LAN内の他端末でもクリップボードAPIを使うにはセキュアコンテキストが必要）
 const USE_HTTPS = /^(1|true|yes|on)$/i.test(process.env.HTTPS || "");
+// スマホ等から到達可能な公開URL/ホスト/ポート（コンテナ運用で必須になりがち）。
+// コンテナ内の os.networkInterfaces() はゲストIP(例: 172.x)を返し、
+// ポートも内部PORTになるため、そのままではQRがスマホから開けない。
+// PUBLIC_URL:  完全なオリジンを直接指定 (例: https://share.example.com)
+// PUBLIC_HOST: ホストのLAN IP/ホスト名   (例: 192.168.1.50)
+// PUBLIC_PORT: 公開ポート（ポートマッピング時のホスト側。例: 3030）
+const PUBLIC_URL = (process.env.PUBLIC_URL || "").trim().replace(/\/+$/, "");
+const PUBLIC_HOST = (process.env.PUBLIC_HOST || "").trim();
+const PUBLIC_PORT = process.env.PUBLIC_PORT || PORT;
 // データ保存先（Dockerではボリュームをマウントして永続化）
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
@@ -340,13 +349,40 @@ app.use((err, req, res, next) => {
   next();
 });
 
+// スマホ等から到達可能なアクセスURLの候補を優先度順で返す。
+// 1) PUBLIC_URL/PUBLIC_HOST（明示指定）→ 2) リクエストのHostヘッダ（管理者が
+//    いま到達できているURL＝公開ポート込みで確実）→ 3) NICのIP（最終手段）。
+// ※ コンテナ内の 3) はゲストIP/内部ポートになりスマホから届かないことが多い。
 function getNetworkUrls(req) {
   const urls = [];
+  const seen = new Set();
+  const add = (u) => {
+    if (u && !seen.has(u)) {
+      seen.add(u);
+      urls.push(u);
+    }
+  };
+  // リバースプロキシ経由も考慮しつつ、基本は本サーバのスキームに従う
+  const fwdProto = req?.headers["x-forwarded-proto"];
+  const proto = (typeof fwdProto === "string" ? fwdProto.split(",")[0].trim() : "") ||
+    (USE_HTTPS ? "https" : "http");
+
+  // 1) 明示指定（コンテナ運用ではこれが最も確実）
+  if (PUBLIC_URL) add(PUBLIC_URL);
+  if (PUBLIC_HOST) add(`${proto}://${PUBLIC_HOST}:${PUBLIC_PORT}`);
+
+  // 2) リクエストのHostヘッダ（管理者が実際にアクセスしているホスト:ポート）
+  const host = req?.headers["x-forwarded-host"] || req?.headers.host;
+  if (host && !/^(localhost|127\.|\[?::1\]?)/i.test(host)) {
+    add(`${proto}://${host}`);
+  }
+
+  // 3) NICのIP（最終手段。コンテナ内ではゲストIP＝スマホから到達不可のことが多い）
   const nics = os.networkInterfaces();
   for (const name of Object.keys(nics)) {
     for (const nic of nics[name] || []) {
       if (nic.family === "IPv4" && !nic.internal) {
-        urls.push(`${USE_HTTPS ? "https" : "http"}://${nic.address}:${PORT}`);
+        add(`${USE_HTTPS ? "https" : "http"}://${nic.address}:${PUBLIC_PORT}`);
       }
     }
   }
